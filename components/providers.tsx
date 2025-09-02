@@ -1,0 +1,11 @@
+"use client"
+
+import type { PropsWithChildren } from "react"
+import { ClerkProvider } from "@clerk/nextjs"
+
+export default function Providers({ children }: PropsWithChildren) {
+  return <ClerkProvider>{children}</ClerkProvider>
+}
+
+
+
