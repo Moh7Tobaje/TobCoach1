@@ -320,10 +320,6 @@ export default function ChatPage() {
       <div className="border-t border-[#2d2e2e]/30 bg-[#091110]/90 backdrop-blur-sm p-3 md:p-4 sticky bottom-0">
         <div className="max-w-4xl mx-auto">
           <div className="flex gap-2 items-end">
-            <Button variant="ghost" size="icon" className="hover:bg-[#e3372e]/20 flex-shrink-0 text-white w-8 h-8 md:w-10 md:h-10">
-              <Paperclip className="h-4 w-4 md:h-5 md:w-5" />
-            </Button>
-
             <div className="flex-1 relative">
               <Button
                 onClick={handleSendMessage}
@@ -341,10 +337,6 @@ export default function ChatPage() {
                 onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
               />
             </div>
-
-            <Button variant="ghost" size="icon" className="hover:bg-[#e3372e]/20 flex-shrink-0 text-white w-8 h-8 md:w-10 md:h-10">
-              <Mic className="h-4 w-4 md:h-5 md:w-5" />
-            </Button>
           </div>
 
           <div className="flex items-center justify-center mt-2">

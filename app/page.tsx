@@ -736,10 +736,7 @@ export default function TopCoachApp() {
               <Users className="w-4 h-4" />
               <span className="text-xs">Community</span>
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => setActiveTab("chat")} className="flex-col space-y-1 min-h-[60px]">
-              <MessageCircle className="w-4 h-4" />
-              <span className="text-xs">Chat</span>
-            </Button>
+
           </div>
         </div>
 
@@ -756,13 +753,7 @@ export default function TopCoachApp() {
           </div>
         )}
 
-        {/* Floating AI Coach Button - Hidden on mobile since we have bottom nav */}
-        <Button
-          className="fixed bottom-20 right-4 md:bottom-6 w-14 h-14 rounded-full gradient-red-silver glow-red shadow-lg hidden md:flex"
-          onClick={() => setActiveTab("chat")}
-        >
-          <MessageCircle className="w-6 h-6" />
-        </Button>
+
       </div>
     )
   }
@@ -1045,55 +1036,7 @@ export default function TopCoachApp() {
     )
   }
 
-  // Chat Tab
-  if (activeTab === "chat") {
-    return (
-      <div className="min-h-screen p-4 pt-20">
-        <div className="container mx-auto max-w-4xl">
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h1 className="text-3xl font-bold font-[var(--font-heading)]">Chat with AI Coach</h1>
-              <p className="text-muted-foreground">Get Personalized Advice and Support</p>
-            </div>
-            <Button onClick={() => setActiveTab("home")} variant="outline">
-              Back to Home
-            </Button>
-          </div>
 
-          <div className="flex flex-col h-full">
-            <div className="flex-1 overflow-y-auto">
-              {chatMessages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`mb-4 flex ${message.sender === "user" ? "justify-end" : "justify-start"}`}
-                >
-                  <Card
-                    className={`gradient-black-gray border-border ${message.sender === "user" ? "bg-primary text-white" : ""}`}
-                  >
-                    <CardContent className="p-4">
-                      <p className="text-sm">{message.content}</p>
-                    </CardContent>
-                  </Card>
-                </div>
-              ))}
-              <div ref={messagesEndRef}></div>
-            </div>
-            <div className="mt-4">
-              <Input
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                placeholder="Type your message..."
-                className="w-full mb-2"
-              />
-              <Button onClick={sendMessage} className="gradient-red-silver">
-                Send
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
-  }
 
   return null
 }
