@@ -34,14 +34,14 @@ export default function FloatingChatButton() {
         <Link href="/chat">
           <Button
             size="lg"
-            className="relative h-16 w-16 rounded-full bg-gradient-to-br from-[#e3372e] to-[#c41e3a] hover:from-[#e3372e]/90 hover:to-[#c41e3a]/90 text-white shadow-2xl glow-red transition-all duration-500 hover:scale-110 hover:rotate-3 border-2 border-white/20 floating-button-bounce"
+            className="relative h-24 w-24 rounded-full bg-gradient-to-br from-[#e3372e] to-[#c41e3a] hover:from-[#e3372e]/90 hover:to-[#c41e3a]/90 text-white shadow-2xl glow-red transition-all duration-500 hover:scale-110 hover:rotate-3 border-2 border-white/20 floating-button-bounce"
           >
             <div className="flex items-center justify-center">
               <Image
                 src="/images/top-coach-logo.svg"
                 alt="AI Coach"
-                width={36}
-                height={36}
+                width={88}
+                height={88}
                 className="rounded-full filter drop-shadow-lg logo-message"
               />
             </div>

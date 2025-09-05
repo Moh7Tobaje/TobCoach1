@@ -228,7 +228,7 @@ export default function ChatPage() {
       {/* Chat Messages */}
       <div className="flex-1 overflow-y-auto p-3 md:p-4 max-w-4xl mx-auto pb-20 md:pb-4">
         <div className="space-y-4 md:space-y-6">
-          {messages.map((message) => (
+          {[...messages].reverse().map((message) => (
             <div
               key={message.id}
               className={`flex gap-2 md:gap-3 ${message.sender === "user" ? "justify-end" : "justify-start"}`}

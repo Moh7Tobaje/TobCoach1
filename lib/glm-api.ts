@@ -39,7 +39,7 @@ export async function getGLMAnswer(
   messages.push({ role: "user", content: userQuestion })
   
   const payload = {
-    model: "glm-4",
+    model: "glm-4-flash",
     messages: messages,
     stream: false
   }

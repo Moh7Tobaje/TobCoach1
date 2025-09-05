@@ -95,6 +95,42 @@ export default function TopCoachApp() {
   const [isVisible, setIsVisible] = useState(false)
   const [progressVisible, setProgressVisible] = useState(false)
   const [comingSoonVisible, setComingSoonVisible] = useState(false)
+  const [progressData, setProgressData] = useState({
+    summary: "Loading today's progress...",
+    percentage: 0,
+    exercisesCompleted: 0,
+    totalExercises: 4,
+    dailyCalories: "Loading...",
+    streakInfo: "Loading..."
+  })
+  
+  // Array of motivational quotes that will rotate
+  const motivationalQuotes = [
+    "AI won't lift the weights for you, but it will make sure every rep counts. 🏋️‍♂️⚡",
+    "Your discipline builds the body, AI sharpens the strategy. 🔥🧠",
+    "Muscles grow from effort, AI makes sure it's the right effort. 💪🤖",
+    "No excuses—AI gives you the plan, you bring the fire. 📋🔥",
+    "Strength is forged in sweat, precision is powered by AI. 💦⚙️",
+    "With AI, your training isn't random—it's lethal. 🎯⚡",
+    "AI doesn't replace your grind, it multiplies it. 🚀💥",
+    "Stop guessing, start dominating—AI is your secret weapon. 🧩👊",
+    "AI unlocks the science, you unleash the beast. 🔓🐉",
+    "Every champion trains hard, the smart ones train with AI. 🏆🤖",
+    "AI kills the limits you set in your head—now you have no ceiling. 🧨🚀",
+    "Your will builds power, AI builds the path. 🛤️💪",
+    "AI is the edge. You are the force. Together, unstoppable. ⚡🦾",
+    "Why train blind, when AI can laser-focus your progress? 🎯👁️",
+    "The future of bodybuilding isn't bigger biceps—it's smarter training. 💡💪",
+    "AI gives clarity, you give chaos to the weights. 🌪️🏋️",
+    "Train like a warrior, recover like a scientist—AI makes it possible. ⚔️🔬",
+    "AI strips away the lies; what's left is pure growth. 🧹📈",
+    "No more wasted sets, no more wasted days—AI is precision strength. ⏳⚡",
+    "Bodybuilding with AI isn't cheating—it's evolution. 🔥🧬"
+  ]
+  
+  // Get a random quote on each render
+  const randomQuote = motivationalQuotes[Math.floor(Math.random() * motivationalQuotes.length)]
+  
   const triggerComingSoon = () => {
     setComingSoonVisible(true)
   }
@@ -255,7 +291,31 @@ export default function TopCoachApp() {
 
   useEffect(() => {
     setIsVisible(true)
+    fetchProgressData()
   }, [])
+
+  const fetchProgressData = async () => {
+    try {
+      const response = await fetch('/api/progress-analysis')
+      if (response.ok) {
+        const data = await response.json()
+        setProgressData({
+          summary: data.progressSummary || "Nothing.",
+          percentage: data.progressPercentage || 0,
+          exercisesCompleted: data.exercisesCompleted || 0,
+          totalExercises: data.totalExercises || 4,
+          dailyCalories: data.dailyCalories || "Unknown",
+          streakInfo: data.streakInfo || "Unknown"
+        })
+      } else {
+        console.error('Failed to fetch progress data')
+        setProgressData(prev => ({ ...prev, summary: "Nothing.", dailyCalories: "Unknown", streakInfo: "Unknown" }))
+      }
+    } catch (error) {
+      console.error('Error fetching progress data:', error)
+      setProgressData(prev => ({ ...prev, summary: "Nothing.", dailyCalories: "Unknown", streakInfo: "Unknown" }))
+    }
+  }
 
   useEffect(() => {
     if (activeTab === "progress") {
@@ -401,6 +461,12 @@ export default function TopCoachApp() {
   }
 
   const handleQuickAction = (action: string) => {
+    if (action === "Generate Workout" || action === "Adjust Intensity") {
+      // Redirect to chatbot page
+      window.location.href = "/chat"
+      return
+    }
+
     const actionMessage: ChatMessage = {
       id: Date.now().toString(),
       content: action,
@@ -415,14 +481,6 @@ export default function TopCoachApp() {
     setTimeout(() => {
       let response = ""
       switch (action) {
-        case "Generate Workout":
-          response =
-            "Perfect! I've created a personalized workout based on your goals and current fitness level. It includes 4 exercises focusing on strength and endurance. Would you like to start now?"
-          break
-        case "Adjust Intensity":
-          response =
-            "Got it! I can adjust your workout intensity. Are you feeling energetic today and want to increase the challenge, or would you prefer something lighter?"
-          break
         case "Meal Suggestions":
           response =
             "Excellent! Based on your dietary preferences and fitness goals, I've prepared some nutritious meal options that will fuel your workouts perfectly."
@@ -542,7 +600,7 @@ export default function TopCoachApp() {
                 Community
               </Button>
             </div>
-            <div className="hidden sm:block">
+            <div>
               <SignedOut>
                 <Button asChild size="sm" className="gradient-red-silver glow-red">
                   <Link href="/sign-in">Start Free</Link>
@@ -624,12 +682,11 @@ export default function TopCoachApp() {
                           <p className="text-xs md:text-sm text-muted-foreground">Online now</p>
                         </div>
                       </div>
-                      <div className="bg-card p-3 md:p-4 rounded-lg border border-border">
-                        <p className="text-xs md:text-sm">
-                          "Based on your progress, I've adjusted your workout intensity by 15%. Ready for today's
-                          challenge? 💪"
-                        </p>
-                      </div>
+                                              <div className="bg-card p-3 md:p-4 rounded-lg border border-border">
+                          <p className="text-base md:text-lg font-medium">
+                            {randomQuote}
+                          </p>
+                        </div>
                       <div className="flex flex-col sm:flex-row gap-2">
                         <Button size="sm" variant="outline" onClick={() => handleQuickAction("Generate Workout")} className="text-xs">
                           Generate Workout
@@ -643,21 +700,21 @@ export default function TopCoachApp() {
                       <div className="bg-card p-3 md:p-4 rounded-lg border border-border">
                         <div className="flex items-center justify-between mb-2">
                           <span className="font-semibold text-sm md:text-base">Today's Progress</span>
-                          <span className="text-primary text-sm md:text-base">75%</span>
+                          <span className="text-primary text-sm md:text-base">{progressData.percentage}%</span>
                         </div>
-                        <Progress value={75} className="mb-2" />
-                        <p className="text-xs md:text-sm text-muted-foreground">3 of 4 exercises completed</p>
+                        <Progress value={progressData.percentage} className="mb-2" />
+                        <p className="text-xs md:text-sm text-muted-foreground mt-2 italic">{progressData.summary}</p>
                       </div>
                       <div className="grid grid-cols-2 gap-3 md:gap-4">
                         <div className="bg-card p-2 md:p-3 rounded-lg border border-border text-center">
                           <Target className="w-4 h-4 md:w-6 md:h-6 text-primary mx-auto mb-1" />
                           <p className="text-xs md:text-sm font-semibold">Calories</p>
-                          <p className="text-sm md:text-lg font-bold text-primary">420</p>
+                          <p className="text-sm md:text-lg font-bold text-white">{progressData.dailyCalories}</p>
                         </div>
                         <div className="bg-card p-2 md:p-3 rounded-lg border border-border text-center">
                           <TrendingUp className="w-4 h-4 md:w-6 md:h-6 text-primary mx-auto mb-1" />
                           <p className="text-xs md:text-sm font-semibold">Streak</p>
-                          <p className="text-sm md:text-lg font-bold text-primary">12 days</p>
+                          <p className="text-sm md:text-lg font-bold text-white">{progressData.streakInfo}</p>
                         </div>
                       </div>
                     </div>
@@ -672,7 +729,7 @@ export default function TopCoachApp() {
         <section className="py-12 md:py-16 px-4">
           <div className="container mx-auto">
             <h2 className="text-2xl md:text-3xl font-bold font-[var(--font-heading)] text-center mb-8 md:mb-12">
-              Trusted by <span className="text-primary">10,000+</span> Fitness Enthusiasts
+              Trusted by <span className="text-primary">100+</span> Fitness Enthusiasts
             </h2>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
               {testimonials.map((testimonial, index) => (
