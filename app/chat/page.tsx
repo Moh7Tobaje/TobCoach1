@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Send, Mic, Paperclip, MoreVertical, ArrowLeft, Zap, Target, Apple, TrendingUp } from "lucide-react"
+import { Send, Mic, Paperclip, MoreVertical, ArrowLeft, Zap, Target, Apple, TrendingUp, Dumbbell, X } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import { useUser } from "@clerk/nextjs"
@@ -19,6 +19,15 @@ interface Message {
   type?: "text" | "workout" | "nutrition" | "progress"
 }
 
+interface MatchedExercise {
+  exerciseId: string
+  name: string
+  gifUrl: string
+  targetMuscles: string[]
+  secondaryMuscles: string[]
+  instructions: string[]
+}
+
 export default function ChatPage() {
   const { user, isLoaded } = useUser()
   const router = useRouter()
@@ -26,6 +35,10 @@ export default function ChatPage() {
   const [inputValue, setInputValue] = useState("")
   const [isTyping, setIsTyping] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  // New: exercise matches UI state
+  const [matchedExercises, setMatchedExercises] = useState<MatchedExercise[]>([])
+  const [isExerciseModalOpen, setIsExerciseModalOpen] = useState(false)
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -53,12 +66,23 @@ export default function ChatPage() {
         })
         .then(data => {
           if (data.messages && data.messages.length > 0) {
-            const formattedMessages: Message[] = data.messages.map((msg: any) => ({
-              id: `msg-${msg.id || Date.now()}-${Math.random()}`,
-              content: msg.content,
-              sender: msg.role === 'user' ? 'user' : 'ai',
-              timestamp: msg.timestamp ? new Date(msg.timestamp) : new Date(),
-            }))
+            const formattedMessages: Message[] = data.messages
+              .map((msg: any, i: number, arr: any[]) => {
+                // Use server timestamp if present; otherwise, synthesize a stable
+                // chronological timestamp based on the array order so we can sort reliably.
+                // If server sends newest-first, this makes older messages smaller (earlier) values.
+                const fallbackTs = new Date(0 + (arr.length - i))
+                const ts = msg.timestamp ? new Date(msg.timestamp) : fallbackTs
+                return {
+                  id: `msg-${msg.id || Date.now()}-${Math.random()}`,
+                  content: msg.content,
+                  sender: msg.role === 'user' ? 'user' : 'ai',
+                  timestamp: ts,
+                } as Message
+              })
+              // Ensure chronological order: oldest first, newest last
+              .sort((a: Message, b: Message) => a.timestamp.getTime() - b.timestamp.getTime())
+
             setMessages(formattedMessages)
           } else {
             // Add welcome message for new users
@@ -83,6 +107,33 @@ export default function ChatPage() {
     }
   }, [isLoaded, user, router])
 
+  // After messages change, detect exercises in the last AI message
+  useEffect(() => {
+    const lastAi = [...messages].reverse().find(m => m.sender === 'ai')
+    if (!lastAi) {
+      setMatchedExercises([])
+      return
+    }
+    const abort = new AbortController()
+    ;(async () => {
+      try {
+        const res = await fetch('/api/exercises/search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: lastAi.content }),
+          signal: abort.signal,
+        })
+        if (!res.ok) throw new Error('exercise search failed')
+        const data = await res.json()
+        setMatchedExercises(Array.isArray(data.results) ? data.results : [])
+      } catch (e) {
+        console.error('exercise detection error', e)
+        setMatchedExercises([])
+      }
+    })()
+    return () => abort.abort()
+  }, [messages])
+
   const handleSendMessage = async () => {
     if (!inputValue.trim() || !user) return
 
@@ -106,12 +157,8 @@ export default function ChatPage() {
         body: JSON.stringify({ message: inputValue }),
       })
 
-      console.log('Response status:', response.status)
-      console.log('Response ok:', response.ok)
-
       if (!response.ok) {
         const errorData = await response.json()
-        console.error('API Error Response:', errorData)
         throw new Error(`Failed to send message: ${response.status} - ${errorData.error || 'Unknown error'}`)
       }
 
@@ -139,8 +186,6 @@ export default function ChatPage() {
     }
   }
 
-  // Remove the generateAIResponse function as it's no longer needed
-
   const handleQuickAction = (action: string) => {
     if (!user) return
     setInputValue(action)
@@ -153,7 +198,6 @@ export default function ChatPage() {
     { icon: TrendingUp, text: "Track my progress", action: "How can I track my progress?" },
   ]
 
-  // Show loading state while Clerk is loading
   if (!isLoaded) {
     return (
       <div className="min-h-screen bg-[#091110] text-white circuit-pattern flex items-center justify-center">
@@ -165,10 +209,9 @@ export default function ChatPage() {
     )
   }
 
-  // Show sign-in prompt if not authenticated
   if (!user) {
     return (
-      <div className="min-h-screen bg-[#091110] text-white circuit-pattern flex items-center justify-center">
+      <div className="min-h-screen bg[#091110] text-white circuit-pattern flex items-center justify-center">
         <div className="text-center">
           <p className="mb-4">Please sign in to access the AI Coach</p>
           <Link href="/sign-in">
@@ -226,9 +269,9 @@ export default function ChatPage() {
       </div>
 
       {/* Chat Messages */}
-      <div className="flex-1 overflow-y-auto p-3 md:p-4 max-w-4xl mx-auto pb-20 md:pb-4">
+      <div className="flex-1 overflow-y-auto p-3 md:p-4 max-w-4xl mx-auto pb-24 md:pb-20">
         <div className="space-y-4 md:space-y-6">
-          {[...messages].reverse().map((message) => (
+          {messages.map((message) => (
             <div
               key={message.id}
               className={`flex gap-2 md:gap-3 ${message.sender === "user" ? "justify-end" : "justify-start"}`}
@@ -294,30 +337,8 @@ export default function ChatPage() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Quick Actions */}
-      {messages.length <= 2 && (
-        <div className="p-3 md:p-4 max-w-4xl mx-auto pb-20 md:pb-4">
-          <div className="mb-4">
-            <h3 className="text-sm font-medium text-[#e3372e] mb-3">Quick Actions</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {quickActions.map((action, index) => (
-                <Button
-                  key={index}
-                  variant="outline"
-                  className="justify-start gap-2 h-auto p-3 text-left hover:bg-[#e3372e]/20 border-[#2d2e2e]/50 bg-[#2d2e2e]/30 text-white backdrop-blur-sm hover:border-[#e3372e]/50 transition-all duration-300"
-                  onClick={() => handleQuickAction(action.action)}
-                >
-                  <action.icon className="h-4 w-4 text-[#e3372e]" />
-                  <span className="text-sm">{action.text}</span>
-                </Button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Input Area */}
-      <div className="border-t border-[#2d2e2e]/30 bg-[#091110]/90 backdrop-blur-sm p-3 md:p-4 sticky bottom-0">
+      <div className="border-t border[#2d2e2e]/30 bg-[#091110]/90 backdrop-blur-sm p-3 md:p-4 sticky bottom-0">
         <div className="max-w-4xl mx-auto">
           <div className="flex gap-2 items-end">
             <div className="flex-1 relative">
@@ -333,10 +354,24 @@ export default function ChatPage() {
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 placeholder="Ask me anything about fitness..."
-                className="pl-8 md:pl-12 bg-[#2d2e2e]/50 border-[#2d2e2e]/50 focus:border-[#e3372e]/50 text-white placeholder:text-[#2d2e2e] backdrop-blur-sm text-sm md:text-base h-10 md:h-12"
+                className="pl-8 md:pl-12 bg-[#2d2e2e]/50 border-[#2d2e2e]/50 focus:border-[#e3372e]/50 text-white placeholder:text[#2d2e2e] backdrop-blur-sm text-sm md:text-base h-10 md:h-12"
                 onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
               />
             </div>
+
+            {/* Dumbbell button appears only if there are exercise matches */}
+            {matchedExercises.length > 0 && (
+              <Button
+                type="button"
+                variant="outline"
+                className="h-10 md:h-12 px-3 md:px-4 border-[#e3372e]/50 text-white hover:bg-[#e3372e]/20"
+                onClick={() => setIsExerciseModalOpen(true)}
+                title="Show exercises from last answer"
+              >
+                <Dumbbell className="h-4 w-4 text-[#e3372e]" />
+                <span className="hidden sm:inline text-sm">Exercises</span>
+              </Button>
+            )}
           </div>
 
           <div className="flex items-center justify-center mt-2">
@@ -346,6 +381,50 @@ export default function ChatPage() {
           </div>
         </div>
       </div>
+
+      {/* Exercises Modal */}
+      {isExerciseModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end md:items-center justify-center p-3 md:p-6" onClick={() => setIsExerciseModalOpen(false)}>
+          <div className="w-full max-w-2xl bg-[#0b1413] border border-[#2d2e2e]/60 rounded-2xl shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-3 md:p-4 border-b border-[#2d2e2e]/60">
+              <h3 className="text-base md:text-lg font-semibold">Exercises Mentioned</h3>
+              <Button size="icon" variant="ghost" className="text-white hover:bg-[#e3372e]/20" onClick={() => setIsExerciseModalOpen(false)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div className="max-h-[70vh] overflow-y-auto p-3 md:p-4 space-y-3 md:space-y-4">
+              {matchedExercises.map((ex) => (
+                <Card key={ex.exerciseId} className="p-3 md:p-4 bg-[#111918] border-[#2d2e2e]/60">
+                  <div className="flex flex-col md:flex-row gap-3 md:gap-4">
+                    <div className="md:w-56 w-full">
+                      <Image src={ex.gifUrl} alt={ex.name} width={224} height={224} className="rounded-lg border border-[#2d2e2e]/50 bg-black object-cover w-full h-auto" />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="text-lg font-semibold mb-1">{ex.name}</h4>
+                      {(ex.targetMuscles?.length || ex.secondaryMuscles?.length) && (
+                        <p className="text-xs md:text-sm text-[#b9c0bf] mb-2">
+                          <span className="font-medium text-white">Targets:</span> {[...(ex.targetMuscles||[]), ...(ex.secondaryMuscles||[])].join(', ')}
+                        </p>
+                      )}
+                      {ex.instructions?.length > 0 && (
+                        <ol className="list-decimal list-inside space-y-1 text-xs md:text-sm text-white/90">
+                          {ex.instructions.map((step, idx) => (
+                            <li key={idx}>{step.replace(/^Step:\s*/i, '')}</li>
+                          ))}
+                        </ol>
+                      )}
+                    </div>
+                  </div>
+                </Card>
+              ))}
+              {matchedExercises.length === 0 && (
+                <p className="text-sm text-[#b9c0bf]">No exercises detected in the last message.</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
